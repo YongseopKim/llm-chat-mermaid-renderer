@@ -15,6 +15,7 @@ interface PlatformSelectors {
     codeBlock: string;
     wrapper: string;
     languageLabel?: string;
+    previewButton?: string;
   };
   detection: 'className' | 'languageLabel' | 'contentBased';
 }
@@ -34,6 +35,7 @@ export interface PlatformConfig {
   wrapperSelector: string;
   detection: 'className' | 'languageLabel' | 'contentBased';
   languageLabelSelector?: string;
+  previewButtonSelector?: string;
 }
 
 /**
@@ -95,6 +97,7 @@ export function getPlatformConfig(platform: Platform): PlatformConfig {
       wrapperSelector: config.selectors.wrapper,
       detection: 'languageLabel',
       languageLabelSelector: config.selectors.languageLabel,
+      previewButtonSelector: config.selectors.previewButton,
     };
   }
 

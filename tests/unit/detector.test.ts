@@ -56,6 +56,17 @@ describe('getPlatformConfig', () => {
     expect(config.wrapperSelector).toBe("[data-testid='code-block']");
   });
 
+  it('should return previewButtonSelector for Grok', () => {
+    const config = getPlatformConfig('grok');
+    expect(config.previewButtonSelector).toBe("button[aria-label='미리보기']");
+  });
+
+  it('should not have previewButtonSelector for other platforms', () => {
+    expect(getPlatformConfig('chatgpt').previewButtonSelector).toBeUndefined();
+    expect(getPlatformConfig('claude').previewButtonSelector).toBeUndefined();
+    expect(getPlatformConfig('gemini').previewButtonSelector).toBeUndefined();
+  });
+
   it('should return contentBased detection for Gemini', () => {
     const config = getPlatformConfig('gemini');
     expect(config.platform).toBe('gemini');

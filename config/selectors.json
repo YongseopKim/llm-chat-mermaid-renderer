@@ -30,7 +30,8 @@
       "selectors": {
         "codeBlock": "[data-testid='code-block'] pre code",
         "wrapper": "[data-testid='code-block']",
-        "languageLabel": ".text-secondary"
+        "languageLabel": ".text-secondary",
+        "previewButton": "button[aria-label='미리보기']"
       },
       "detection": "languageLabel"
     }

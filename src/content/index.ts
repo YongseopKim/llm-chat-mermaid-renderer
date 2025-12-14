@@ -19,6 +19,12 @@ async function main() {
     return;
   }
 
+  // Grok has its own mermaid renderer, skip processing
+  if (platform === 'grok') {
+    console.log('[MPR] Grok detected - skipping (has native mermaid support)');
+    return;
+  }
+
   console.log(`[MPR] Detected platform: ${platform}`);
 
   // 2. Load Mermaid.js

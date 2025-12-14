@@ -98,6 +98,113 @@ export function getWrapperToReplace(
 }
 
 /**
+ * Create Grok diagram container (hidden initially)
+ * Includes hidden source for LLM Chat Exporter compatibility
+ */
+export function createGrokDiagramContainer(sourceCode: string): HTMLDivElement {
+  const container = document.createElement('div');
+  container.className = 'mpr-grok-diagram';
+  container.style.display = 'none';
+
+  // Hidden source for LLM Chat Exporter
+  const sourceWrapper = document.createElement('pre');
+  sourceWrapper.className = 'mpr-source';
+  sourceWrapper.style.display = 'none';
+
+  const sourceCodeEl = document.createElement('code');
+  sourceCodeEl.className = 'language-mermaid';
+  sourceCodeEl.textContent = sourceCode;
+  sourceWrapper.appendChild(sourceCodeEl);
+
+  // Rendered diagram area
+  const renderedDiv = document.createElement('div');
+  renderedDiv.className = 'mpr-rendered';
+
+  container.appendChild(sourceWrapper);
+  container.appendChild(renderedDiv);
+
+  return container;
+}
+
+/**
+ * Toggle Grok diagram visibility
+ */
+export function toggleGrokDiagram(
+  diagramContainer: HTMLElement,
+  codeContainer: Element | null
+): void {
+  const isShowingDiagram = diagramContainer.style.display !== 'none';
+
+  if (isShowingDiagram) {
+    // Hide diagram, show code
+    diagramContainer.style.display = 'none';
+    if (codeContainer instanceof HTMLElement) {
+      codeContainer.style.display = '';
+    }
+  } else {
+    // Show diagram, hide code
+    diagramContainer.style.display = '';
+    if (codeContainer instanceof HTMLElement) {
+      codeContainer.style.display = 'none';
+    }
+  }
+}
+
+/**
+ * Render Grok mermaid block with button toggle
+ * Preserves Grok's original UI (fold, copy buttons)
+ */
+export async function renderGrokMermaidBlock(
+  wrapper: Element,
+  config: PlatformConfig
+): Promise<void> {
+  // 1. Find preview button
+  const previewBtn = wrapper.querySelector(config.previewButtonSelector!);
+  if (!previewBtn) return;
+
+  // 2. Extract source code
+  const sourceCode = extractSourceCode(wrapper, config);
+  if (!sourceCode) return;
+
+  // 3. Create diagram container (hidden initially)
+  const diagramContainer = createGrokDiagramContainer(sourceCode);
+
+  // 4. Render diagram
+  const uniqueId = `mpr-diagram-${++renderCounter}`;
+  const renderedDiv = diagramContainer.querySelector('.mpr-rendered');
+  try {
+    const { svg } = await mermaid.render(uniqueId, sourceCode);
+    if (renderedDiv) renderedDiv.innerHTML = svg;
+  } catch (err) {
+    if (renderedDiv) {
+      renderedDiv.innerHTML = `<div class="mpr-error">Mermaid rendering failed: ${err}</div>`;
+      renderedDiv.classList.add('mpr-error-container');
+    }
+  }
+
+  // 5. Find code container (shiki div)
+  const codeContainer = wrapper.querySelector('.shiki');
+
+  // 6. Insert diagram container after code container
+  if (codeContainer?.parentElement) {
+    codeContainer.parentElement.insertBefore(
+      diagramContainer,
+      codeContainer.nextSibling
+    );
+  }
+
+  // 7. Add click event to preview button
+  previewBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleGrokDiagram(diagramContainer, codeContainer);
+  });
+
+  // 8. Mark as processed
+  wrapper.setAttribute('data-mpr-processed', 'true');
+}
+
+/**
  * Render a single mermaid block
  */
 export async function renderMermaidBlock(

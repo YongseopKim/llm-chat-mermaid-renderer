@@ -73,8 +73,8 @@ llm-chat-mermaid-renderer/
 | Grok | grok.com | `[data-testid='code-block'] pre code` | 언어 라벨이 별도 span |
 
 ### Grok 특수 처리
-- 언어 라벨: `<span class="text-secondary">mermaid</span>`
-- 기존 "미리보기" 버튼 → 우리 렌더러로 교체
+- **비활성화**: Grok은 자체 mermaid 렌더러가 있으므로 우리 확장 프로그램에서 처리하지 않음
+- Grok 감지 시 `index.ts`에서 early return
 
 ---
 

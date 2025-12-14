@@ -3,6 +3,8 @@ import {
   createPreservingWrapper,
   extractSourceCode,
   getWrapperToReplace,
+  createGrokDiagramContainer,
+  toggleGrokDiagram,
 } from '../../src/content/renderer';
 import { getPlatformConfig } from '../../src/content/detector';
 
@@ -179,6 +181,91 @@ describe('getWrapperToReplace', () => {
 
     const result = getWrapperToReplace(wrapper, config);
     expect(result.id).toBe('grok-wrapper');
+  });
+});
+
+describe('createGrokDiagramContainer', () => {
+  const testCode = 'graph TD; A-->B;';
+
+  it('should create container with mpr-grok-diagram class', () => {
+    const container = createGrokDiagramContainer(testCode);
+
+    expect(container.className).toBe('mpr-grok-diagram');
+    expect(container.style.display).toBe('none');
+  });
+
+  it('should include hidden source for LLM Chat Exporter', () => {
+    const container = createGrokDiagramContainer(testCode);
+    const sourceWrapper = container.querySelector('.mpr-source');
+
+    expect(sourceWrapper).not.toBeNull();
+    expect((sourceWrapper as HTMLElement).style.display).toBe('none');
+  });
+
+  it('should preserve source code with language-mermaid class', () => {
+    const container = createGrokDiagramContainer(testCode);
+    const codeEl = container.querySelector('code.language-mermaid');
+
+    expect(codeEl).not.toBeNull();
+    expect(codeEl!.textContent).toBe(testCode);
+  });
+
+  it('should create rendered div for SVG', () => {
+    const container = createGrokDiagramContainer(testCode);
+    const renderedDiv = container.querySelector('.mpr-rendered');
+
+    expect(renderedDiv).not.toBeNull();
+  });
+});
+
+describe('toggleGrokDiagram', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('should show diagram and hide code when diagram is hidden', () => {
+    document.body.innerHTML = `
+      <div class="mpr-grok-diagram" style="display: none;"></div>
+      <div class="shiki"></div>
+    `;
+    const diagramContainer = document.querySelector(
+      '.mpr-grok-diagram'
+    ) as HTMLElement;
+    const codeContainer = document.querySelector('.shiki');
+
+    toggleGrokDiagram(diagramContainer, codeContainer);
+
+    expect(diagramContainer.style.display).toBe('');
+    expect((codeContainer as HTMLElement).style.display).toBe('none');
+  });
+
+  it('should hide diagram and show code when diagram is visible', () => {
+    document.body.innerHTML = `
+      <div class="mpr-grok-diagram" style="display: block;"></div>
+      <div class="shiki" style="display: none;"></div>
+    `;
+    const diagramContainer = document.querySelector(
+      '.mpr-grok-diagram'
+    ) as HTMLElement;
+    const codeContainer = document.querySelector('.shiki');
+
+    toggleGrokDiagram(diagramContainer, codeContainer);
+
+    expect(diagramContainer.style.display).toBe('none');
+    expect((codeContainer as HTMLElement).style.display).toBe('');
+  });
+
+  it('should handle null codeContainer gracefully', () => {
+    document.body.innerHTML = `
+      <div class="mpr-grok-diagram" style="display: none;"></div>
+    `;
+    const diagramContainer = document.querySelector(
+      '.mpr-grok-diagram'
+    ) as HTMLElement;
+
+    // Should not throw
+    expect(() => toggleGrokDiagram(diagramContainer, null)).not.toThrow();
+    expect(diagramContainer.style.display).toBe('');
   });
 });
 

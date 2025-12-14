@@ -31,6 +31,7 @@ export function cleanupMermaidErrorElements(renderId: string): void {
     `#d${renderId}`, // Error container
     `#${renderId}`, // SVG element
     `[id^="d${renderId}"]`, // Any element starting with d{renderId}
+    `svg[aria-roledescription="error"]#${renderId}`, // Error SVG with aria attribute
   ];
 
   errorSelectors.forEach((selector) => {
@@ -203,7 +204,10 @@ export async function renderGrokMermaidBlock(
     if (renderedDiv) renderedDiv.innerHTML = svg;
   } catch (err) {
     // CRITICAL: Clean up Mermaid's injected error elements from DOM
+    // Mermaid.js may inject error SVGs asynchronously, so we clean up
+    // both immediately and after a short delay
     cleanupMermaidErrorElements(uniqueId);
+    setTimeout(() => cleanupMermaidErrorElements(uniqueId), 0);
 
     if (renderedDiv) {
       const parsedError = parseErrorMessage(err);
@@ -264,7 +268,9 @@ export async function renderMermaidBlock(
       // CRITICAL: Clean up Mermaid's injected error elements from DOM
       // Mermaid.js injects error SVGs directly into document.body on parse errors
       // This breaks the UI on Gemini (and potentially other platforms)
+      // We clean up both immediately and after a short delay to handle async injection
       cleanupMermaidErrorElements(uniqueId);
+      setTimeout(() => cleanupMermaidErrorElements(uniqueId), 0);
 
       const parsedError = parseErrorMessage(err);
       renderedDiv.innerHTML = '';

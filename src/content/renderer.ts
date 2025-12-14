@@ -9,6 +9,7 @@
 
 import { PlatformConfig, findUnprocessedMermaidBlocks } from './detector';
 import { createToggleButton } from './toggle';
+import { parseErrorMessage, createErrorElement } from './errorHandler';
 
 declare const mermaid: {
   initialize: (config: object) => void;
@@ -16,6 +17,31 @@ declare const mermaid: {
 };
 
 let renderCounter = 0;
+
+/**
+ * Clean up Mermaid error elements from DOM
+ *
+ * Mermaid.js injects error SVG elements directly into document.body
+ * when parsing fails. This breaks the UI (especially on Gemini).
+ * This function removes those injected elements.
+ */
+export function cleanupMermaidErrorElements(renderId: string): void {
+  // Mermaid creates elements with id "d{renderId}" for errors
+  const errorSelectors = [
+    `#d${renderId}`, // Error container
+    `#${renderId}`, // SVG element
+    `[id^="d${renderId}"]`, // Any element starting with d{renderId}
+  ];
+
+  errorSelectors.forEach((selector) => {
+    try {
+      const elements = document.querySelectorAll(selector);
+      elements.forEach((el) => el.remove());
+    } catch {
+      // Ignore selector errors
+    }
+  });
+}
 
 /**
  * Create the preserving wrapper structure
@@ -176,8 +202,13 @@ export async function renderGrokMermaidBlock(
     const { svg } = await mermaid.render(uniqueId, sourceCode);
     if (renderedDiv) renderedDiv.innerHTML = svg;
   } catch (err) {
+    // CRITICAL: Clean up Mermaid's injected error elements from DOM
+    cleanupMermaidErrorElements(uniqueId);
+
     if (renderedDiv) {
-      renderedDiv.innerHTML = `<div class="mpr-error">Mermaid rendering failed: ${err}</div>`;
+      const parsedError = parseErrorMessage(err);
+      renderedDiv.innerHTML = '';
+      renderedDiv.appendChild(createErrorElement(parsedError));
       renderedDiv.classList.add('mpr-error-container');
     }
   }
@@ -222,17 +253,27 @@ export async function renderMermaidBlock(
 
     // 3. Render with Mermaid.js
     const uniqueId = `mpr-diagram-${++renderCounter}`;
+    let hasError = false;
     try {
       const { svg } = await mermaid.render(uniqueId, sourceCode);
       renderedDiv.innerHTML = svg;
     } catch (err) {
-      // Render error - show message but preserve source
-      renderedDiv.innerHTML = `<div class="mpr-error">Mermaid rendering failed: ${err}</div>`;
+      // Render error - show user-friendly message and auto-show source
+      hasError = true;
+
+      // CRITICAL: Clean up Mermaid's injected error elements from DOM
+      // Mermaid.js injects error SVGs directly into document.body on parse errors
+      // This breaks the UI on Gemini (and potentially other platforms)
+      cleanupMermaidErrorElements(uniqueId);
+
+      const parsedError = parseErrorMessage(err);
+      renderedDiv.innerHTML = '';
+      renderedDiv.appendChild(createErrorElement(parsedError));
       renderedDiv.classList.add('mpr-error-container');
     }
 
-    // 4. Add toggle button
-    const toggleBtn = createToggleButton(sourceWrapper, renderedDiv);
+    // 4. Add toggle button (show source automatically on error)
+    const toggleBtn = createToggleButton(sourceWrapper, renderedDiv, hasError);
     container.appendChild(toggleBtn);
 
     // 5. Replace original element

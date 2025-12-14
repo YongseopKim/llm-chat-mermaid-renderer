@@ -5,6 +5,7 @@ import {
   getWrapperToReplace,
   createGrokDiagramContainer,
   toggleGrokDiagram,
+  cleanupMermaidErrorElements,
 } from '../../src/content/renderer';
 import { getPlatformConfig } from '../../src/content/detector';
 
@@ -266,6 +267,115 @@ describe('toggleGrokDiagram', () => {
     // Should not throw
     expect(() => toggleGrokDiagram(diagramContainer, null)).not.toThrow();
     expect(diagramContainer.style.display).toBe('');
+  });
+});
+
+describe('cleanupMermaidErrorElements', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('should remove Mermaid error element with d{id} format', () => {
+    // Mermaid.js creates error elements with id="d{renderId}"
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'dmpr-diagram-1';
+    document.body.appendChild(errorDiv);
+
+    expect(document.getElementById('dmpr-diagram-1')).not.toBeNull();
+
+    cleanupMermaidErrorElements('mpr-diagram-1');
+
+    expect(document.getElementById('dmpr-diagram-1')).toBeNull();
+  });
+
+  it('should remove SVG element with render id', () => {
+    // Mermaid.js also creates SVG elements with the render id
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.id = 'mpr-diagram-2';
+    document.body.appendChild(svg);
+
+    expect(document.getElementById('mpr-diagram-2')).not.toBeNull();
+
+    cleanupMermaidErrorElements('mpr-diagram-2');
+
+    expect(document.getElementById('mpr-diagram-2')).toBeNull();
+  });
+
+  it('should remove multiple error elements for same render id', () => {
+    // Create multiple elements that Mermaid might inject
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'dmpr-diagram-3';
+    document.body.appendChild(errorDiv);
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.id = 'mpr-diagram-3';
+    document.body.appendChild(svg);
+
+    cleanupMermaidErrorElements('mpr-diagram-3');
+
+    expect(document.getElementById('dmpr-diagram-3')).toBeNull();
+    expect(document.getElementById('mpr-diagram-3')).toBeNull();
+  });
+
+  it('should not remove unrelated elements', () => {
+    // Create an unrelated element
+    const otherDiv = document.createElement('div');
+    otherDiv.id = 'some-other-element';
+    document.body.appendChild(otherDiv);
+
+    // Create Mermaid error element
+    const errorDiv = document.createElement('div');
+    errorDiv.id = 'dmpr-diagram-4';
+    document.body.appendChild(errorDiv);
+
+    cleanupMermaidErrorElements('mpr-diagram-4');
+
+    // Unrelated element should still exist
+    expect(document.getElementById('some-other-element')).not.toBeNull();
+    // Mermaid error element should be removed
+    expect(document.getElementById('dmpr-diagram-4')).toBeNull();
+  });
+
+  it('should handle case when no error elements exist', () => {
+    // Should not throw when there are no elements to clean up
+    expect(() => cleanupMermaidErrorElements('mpr-diagram-99')).not.toThrow();
+  });
+});
+
+describe('Mermaid Error DOM Pollution Integration', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('should demonstrate Mermaid error injection pattern', async () => {
+    // This test documents the Mermaid.js behavior that causes the Gemini bug
+    const invalidCode = 'invalid mermaid syntax @@@@';
+    const { container } = createPreservingWrapper(invalidCode);
+    document.body.appendChild(container);
+
+    // Mock mermaid.render to simulate error + DOM injection (like real Mermaid does)
+    const mockMermaid = {
+      render: async (id: string) => {
+        // Mermaid.js injects error divs into document.body on parse errors
+        const errorDiv = document.createElement('div');
+        errorDiv.id = `d${id}`;
+        errorDiv.innerHTML = '<svg id="' + id + '"><text>Syntax error in text</text></svg>';
+        document.body.appendChild(errorDiv);
+        throw new Error('Syntax error in text mermaid version 11.12.2');
+      },
+    };
+
+    // Simulate render attempt
+    try {
+      await mockMermaid.render('test-id', invalidCode);
+    } catch {
+      // Our fix: clean up after error
+      cleanupMermaidErrorElements('test-id');
+    }
+
+    // After cleanup: error elements should be removed
+    expect(document.getElementById('dtest-id')).toBeNull();
+    expect(document.getElementById('test-id')).toBeNull();
   });
 });
 

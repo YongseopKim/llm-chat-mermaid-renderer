@@ -8,15 +8,25 @@
 
 export function createToggleButton(
   sourceEl: HTMLElement,
-  renderedEl: HTMLElement
+  renderedEl: HTMLElement,
+  initialShowSource: boolean = false
 ): HTMLButtonElement {
   const button = document.createElement('button');
   button.className = 'mpr-toggle';
-  button.title = 'Show source code';
-  button.textContent = '{ }';
   button.setAttribute('aria-label', 'Toggle between source code and diagram');
 
-  let showingSource = false;
+  let showingSource = initialShowSource;
+
+  // Set initial state
+  if (showingSource) {
+    sourceEl.style.display = 'block';
+    renderedEl.style.display = 'block'; // Show both error and source
+    button.textContent = '\u25B6'; // Play icon (diagram)
+    button.title = 'Show diagram';
+  } else {
+    button.textContent = '{ }';
+    button.title = 'Show source code';
+  }
 
   button.addEventListener('click', () => {
     showingSource = !showingSource;

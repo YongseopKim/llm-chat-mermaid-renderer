@@ -18,5 +18,8 @@
     "vitest": "^2.1.8"
   },
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "mermaid": "^11.12.2"
+  }
 }

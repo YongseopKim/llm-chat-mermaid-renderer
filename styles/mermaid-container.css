@@ -1,0 +1,108 @@
+/**
+ * Mermaid Preserving Renderer Styles
+ */
+
+/* Container */
+.mpr-container {
+  position: relative;
+  margin: 1rem 0;
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--mpr-bg, #ffffff);
+}
+
+/* Source code (hidden by default) */
+.mpr-source {
+  margin: 0;
+  padding: 1rem;
+  background: var(--mpr-code-bg, #f6f8fa);
+  overflow-x: auto;
+}
+
+.mpr-source code {
+  font-family: 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  white-space: pre;
+  color: var(--mpr-code-color, #24292e);
+}
+
+/* Rendered diagram */
+.mpr-rendered {
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
+  background: var(--mpr-diagram-bg, #ffffff);
+}
+
+.mpr-rendered svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Toggle button */
+.mpr-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 8px;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-family: monospace;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  z-index: 10;
+  color: var(--mpr-toggle-color, #333);
+}
+
+.mpr-toggle:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 1);
+}
+
+/* Error state */
+.mpr-error-container {
+  background: #fff5f5;
+}
+
+.mpr-error {
+  color: #c53030;
+  padding: 1rem;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .mpr-container {
+    --mpr-bg: #1e1e1e;
+    --mpr-code-bg: #2d2d2d;
+    --mpr-code-color: #e0e0e0;
+    --mpr-diagram-bg: #1e1e1e;
+    --mpr-toggle-color: #e0e0e0;
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .mpr-toggle {
+    background: rgba(45, 45, 45, 0.9);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .mpr-toggle:hover {
+    background: rgba(60, 60, 60, 1);
+  }
+
+  .mpr-error-container {
+    background: #3d1f1f;
+  }
+
+  .mpr-error {
+    color: #fc8181;
+  }
+}

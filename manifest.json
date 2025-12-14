@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "LLM Chat Mermaid Renderer",
+  "version": "1.0.0",
+  "description": "Render Mermaid diagrams in LLM chat interfaces while preserving source code for export",
+
+  "permissions": ["activeTab", "storage"],
+
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://claude.ai/*",
+    "https://gemini.google.com/*",
+    "https://grok.com/*"
+  ],
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*",
+        "https://grok.com/*"
+      ],
+      "js": ["dist/content.js"],
+      "css": ["styles/mermaid-container.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

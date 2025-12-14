@@ -1,0 +1,38 @@
+{
+  "version": "1.0.0",
+  "platforms": {
+    "chatgpt": {
+      "hostname": "chatgpt.com",
+      "selectors": {
+        "codeBlock": "pre code.language-mermaid",
+        "wrapper": "pre"
+      },
+      "detection": "className"
+    },
+    "claude": {
+      "hostname": "claude.ai",
+      "selectors": {
+        "codeBlock": "pre code.language-mermaid",
+        "wrapper": "pre"
+      },
+      "detection": "className"
+    },
+    "gemini": {
+      "hostname": "gemini.google.com",
+      "selectors": {
+        "codeBlock": "code[data-test-id='code-content']",
+        "wrapper": "pre"
+      },
+      "detection": "contentBased"
+    },
+    "grok": {
+      "hostname": "grok.com",
+      "selectors": {
+        "codeBlock": "[data-testid='code-block'] pre code",
+        "wrapper": "[data-testid='code-block']",
+        "languageLabel": ".text-secondary"
+      },
+      "detection": "languageLabel"
+    }
+  }
+}

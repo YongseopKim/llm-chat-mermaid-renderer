@@ -1,0 +1,246 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  createPreservingWrapper,
+  extractSourceCode,
+  getWrapperToReplace,
+} from '../../src/content/renderer';
+import { getPlatformConfig } from '../../src/content/detector';
+
+describe('createPreservingWrapper', () => {
+  const testCode = 'graph TD; A-->B;';
+
+  it('should create container with data-mpr-processed attribute', () => {
+    const { container } = createPreservingWrapper(testCode);
+
+    expect(container.className).toBe('mpr-container');
+    expect(container.getAttribute('data-mpr-processed')).toBe('true');
+  });
+
+  it('should create hidden source wrapper with correct structure', () => {
+    const { sourceWrapper } = createPreservingWrapper(testCode);
+
+    expect(sourceWrapper.className).toBe('mpr-source');
+    expect(sourceWrapper.style.display).toBe('none');
+    expect(sourceWrapper.tagName.toLowerCase()).toBe('pre');
+  });
+
+  it('should preserve source code in code element with language-mermaid class', () => {
+    const { sourceWrapper } = createPreservingWrapper(testCode);
+    const codeEl = sourceWrapper.querySelector('code');
+
+    expect(codeEl).not.toBeNull();
+    expect(codeEl!.className).toBe('language-mermaid');
+    expect(codeEl!.textContent).toBe(testCode);
+  });
+
+  it('should create rendered div for SVG', () => {
+    const { renderedDiv } = createPreservingWrapper(testCode);
+
+    expect(renderedDiv.className).toBe('mpr-rendered');
+    expect(renderedDiv.tagName.toLowerCase()).toBe('div');
+  });
+
+  it('should assemble structure correctly', () => {
+    const { container, sourceWrapper, renderedDiv } =
+      createPreservingWrapper(testCode);
+
+    expect(container.children).toHaveLength(2);
+    expect(container.children[0]).toBe(sourceWrapper);
+    expect(container.children[1]).toBe(renderedDiv);
+  });
+
+  describe('LLM Chat Exporter Compatibility', () => {
+    it('should have parseable structure for converter.ts', () => {
+      const { container } = createPreservingWrapper(testCode);
+
+      // converter.ts looks for: pre > code.language-mermaid
+      const codeEl = container.querySelector('pre code.language-mermaid');
+      expect(codeEl).not.toBeNull();
+      expect(codeEl!.textContent).toBe(testCode);
+    });
+
+    it('should allow textContent extraction even when hidden', () => {
+      const { sourceWrapper } = createPreservingWrapper(testCode);
+
+      // Even with display:none, textContent should be extractable
+      expect(sourceWrapper.style.display).toBe('none');
+      expect(sourceWrapper.textContent).toBe(testCode);
+    });
+
+    it('should match converter.ts language detection pattern', () => {
+      const { sourceWrapper } = createPreservingWrapper(testCode);
+      const codeEl = sourceWrapper.querySelector('code')!;
+
+      // converter.ts uses: codeEl.className.match(/language-(\w+)/)
+      const langMatch = codeEl.className.match(/language-(\w+)/);
+      expect(langMatch).not.toBeNull();
+      expect(langMatch![1]).toBe('mermaid');
+    });
+  });
+});
+
+describe('extractSourceCode', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  describe('ChatGPT/Claude/Gemini (className detection)', () => {
+    const config = getPlatformConfig('chatgpt');
+
+    it('should extract code from code element textContent', () => {
+      document.body.innerHTML = `
+        <pre><code class="language-mermaid">graph TD; A-->B;</code></pre>
+      `;
+      const codeEl = document.querySelector('code')!;
+      expect(extractSourceCode(codeEl, config)).toBe('graph TD; A-->B;');
+    });
+
+    it('should trim whitespace', () => {
+      document.body.innerHTML = `
+        <pre><code class="language-mermaid">
+          graph TD; A-->B;
+        </code></pre>
+      `;
+      const codeEl = document.querySelector('code')!;
+      expect(extractSourceCode(codeEl, config)).toBe('graph TD; A-->B;');
+    });
+
+    it('should return empty string for empty code', () => {
+      document.body.innerHTML = `
+        <pre><code class="language-mermaid"></code></pre>
+      `;
+      const codeEl = document.querySelector('code')!;
+      expect(extractSourceCode(codeEl, config)).toBe('');
+    });
+  });
+
+  describe('Grok (languageLabel detection)', () => {
+    const config = getPlatformConfig('grok');
+
+    it('should extract code from wrapper > pre > code', () => {
+      document.body.innerHTML = `
+        <div data-testid="code-block">
+          <span class="text-secondary">mermaid</span>
+          <pre><code>graph TD; A-->B;</code></pre>
+        </div>
+      `;
+      const wrapper = document.querySelector('[data-testid="code-block"]')!;
+      expect(extractSourceCode(wrapper, config)).toBe('graph TD; A-->B;');
+    });
+
+    it('should handle Grok Shiki highlighting (span lines)', () => {
+      // Grok uses Shiki which wraps each line in spans
+      document.body.innerHTML = `
+        <div data-testid="code-block">
+          <span class="text-secondary">mermaid</span>
+          <pre class="shiki">
+            <code>
+              <span class="line">graph TD</span>
+              <span class="line">    A-->B</span>
+            </code>
+          </pre>
+        </div>
+      `;
+      const wrapper = document.querySelector('[data-testid="code-block"]')!;
+      const code = extractSourceCode(wrapper, config);
+      // textContent should concatenate all spans
+      expect(code).toContain('graph TD');
+      expect(code).toContain('A-->B');
+    });
+  });
+});
+
+describe('getWrapperToReplace', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('should return parent pre for ChatGPT/Claude/Gemini', () => {
+    document.body.innerHTML = `
+      <pre id="wrapper"><code class="language-mermaid">graph TD;</code></pre>
+    `;
+    const codeEl = document.querySelector('code')!;
+    const config = getPlatformConfig('chatgpt');
+
+    const wrapper = getWrapperToReplace(codeEl, config);
+    expect(wrapper.id).toBe('wrapper');
+    expect(wrapper.tagName.toLowerCase()).toBe('pre');
+  });
+
+  it('should return element itself for Grok', () => {
+    document.body.innerHTML = `
+      <div data-testid="code-block" id="grok-wrapper">
+        <span class="text-secondary">mermaid</span>
+        <pre><code>graph TD;</code></pre>
+      </div>
+    `;
+    const wrapper = document.querySelector('[data-testid="code-block"]')!;
+    const config = getPlatformConfig('grok');
+
+    const result = getWrapperToReplace(wrapper, config);
+    expect(result.id).toBe('grok-wrapper');
+  });
+});
+
+describe('DOM Transformation Integration', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('should transform ChatGPT structure correctly', () => {
+    const testCode = 'graph TD; A-->B;';
+    document.body.innerHTML = `
+      <div class="message">
+        <pre><code class="language-mermaid">${testCode}</code></pre>
+      </div>
+    `;
+
+    // Simulate transformation
+    const codeEl = document.querySelector('code')!;
+    const config = getPlatformConfig('chatgpt');
+    const wrapperToReplace = getWrapperToReplace(codeEl, config);
+
+    const { container } = createPreservingWrapper(testCode);
+    wrapperToReplace.replaceWith(container);
+
+    // Verify transformation
+    const messageDiv = document.querySelector('.message')!;
+    // Original pre (direct child, not inside mpr-container) should be gone
+    expect(messageDiv.querySelector(':scope > pre')).toBeNull();
+    // mpr-container should exist
+    expect(messageDiv.querySelector('.mpr-container')).not.toBeNull();
+    // Source should be preserved inside mpr-source
+    expect(
+      messageDiv.querySelector('.mpr-source code.language-mermaid')!.textContent
+    ).toBe(testCode);
+  });
+
+  it('should transform Grok structure correctly', () => {
+    const testCode = 'graph TD; A-->B;';
+    document.body.innerHTML = `
+      <div class="message">
+        <div data-testid="code-block">
+          <span class="text-secondary">mermaid</span>
+          <pre><code>${testCode}</code></pre>
+        </div>
+      </div>
+    `;
+
+    // Simulate transformation
+    const wrapper = document.querySelector('[data-testid="code-block"]')!;
+    const config = getPlatformConfig('grok');
+    const sourceCode = extractSourceCode(wrapper, config);
+    const wrapperToReplace = getWrapperToReplace(wrapper, config);
+
+    const { container } = createPreservingWrapper(sourceCode);
+    wrapperToReplace.replaceWith(container);
+
+    // Verify transformation
+    const messageDiv = document.querySelector('.message')!;
+    expect(messageDiv.querySelector('[data-testid="code-block"]')).toBeNull();
+    expect(messageDiv.querySelector('.mpr-container')).not.toBeNull();
+    expect(
+      messageDiv.querySelector('.mpr-source code.language-mermaid')!.textContent
+    ).toBe(testCode);
+  });
+});

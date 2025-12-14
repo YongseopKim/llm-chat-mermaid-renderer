@@ -1,0 +1,22 @@
+{
+  "name": "llm-chat-mermaid-renderer",
+  "version": "1.0.0",
+  "description": "Render Mermaid diagrams in LLM chat interfaces while preserving source code",
+  "type": "module",
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "watch": "node esbuild.config.mjs --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.24.0",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "author": "",
+  "license": "MIT"
+}
